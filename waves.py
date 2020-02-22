@@ -69,19 +69,15 @@ def get_fourier_transform(
 class Block(Rectangle):
     CONFIG = {
         "mass": 1,
-        "inital_velocity": 2,
         "velocity": 0,
         "width": 0.1,
         "height": 3.0,
-        "label_text": None,
-        "label_scale_value": 0.8,
         "fill_opacity": 1,
-        "stroke_width": 3,
+        "stroke_width": 1,
         "stroke_color": WHITE,
         "fill_color": None,
-        "sheen_direction": UL,
-        "sheen_factor": 0.5,
-        "sheen_direction": UL,
+        
+    
     }
 
     def __init__(self, **kwargs):
@@ -92,21 +88,6 @@ class Block(Rectangle):
     def get_points_defining_boundary(self):
         return self.points
 
-    def mass_to_color(self, mass):
-        colors = [
-            LIGHT_GREY,
-            BLUE_D,
-            BLUE_D,
-            BLUE_E,
-            BLUE_E,
-            DARK_GREY,
-            DARK_GREY,
-            BLACK,
-        ]
-        index = min(int(np.log10(mass)), len(colors) - 1)
-        return colors[index]
-
-
 
 class SlidingBlocks(VGroup):
     CONFIG = {
@@ -115,18 +96,21 @@ class SlidingBlocks(VGroup):
             "mass": 1,
             "velocity": 0,
         },
-        "membrane":-2,
-        "floor_pos":-2
+        "membrane":-4.3,
+        "floor_pos":-2,
+        "amplitude": 0.2,
+        "frequency":5,
+        "timer":0,
     }
 
     def __init__(self, scene, **kwargs):
         VGroup.__init__(self, **kwargs)
         self.scene = scene
         self.block = self.get_block(**self.block_config)
-        self.phase_space_point_tracker = self.get_phase_space_point_tracker()
+        #self.phase_space_point_tracker = self.get_phase_space_point_tracker()
         self.add(
             self.block,
-            self.phase_space_point_tracker
+            #self.phase_space_point_tracker
         )
         self.add_updater(self.__class__.update_positions)
 
@@ -139,70 +123,20 @@ class SlidingBlocks(VGroup):
             DL,
         )
         return block
-
-    def get_phase_space_point_tracker(self):
-        block = self.block
-        wb = block.get_width()
-        s1 = self.membrane + wb
-        result = VectorizedPoint([
-            s1 * np.sqrt(block.mass),
-            0
-        ])
-
-        return result
-
+  
     def update_positions(self, dt):
-        
-        self.phase_space_point_tracker.shift(
-            self.block.velocity * dt
-        )
-        self.update_blocks_from_phase_space_point_tracker()
-
-    def update_blocks_from_phase_space_point_tracker(self):
         block= self.block
-        ps_point = self.phase_space_point_tracker.get_location()
-        self.block.velocity+= np.sin(ps_point)
-
         floor_y = self.floor_pos
+        self.timer +=dt
+        ps_block= self.amplitude* np.sin(self.frequency* self.timer)
         block.move_to(
-                (self.membrane+ ps_point[0]) * RIGHT +
+                (self.membrane+ ps_block) * RIGHT +
                 floor_y * UP,      
                 DL,
             )
-       
-        
 
 
-    
-
-       
-
-
-class BlocksAndWallScene(Scene):
-    CONFIG = {
-        "sliding_blocks_config": {},        
-    }
-
-    def setup(self):
-        self.track_time()
-        self.add_blocks()
-        
-
-
-    def add_blocks(self):
-        self.blocks = SlidingBlocks(self, **self.sliding_blocks_config)
-        self.add(self.blocks)
-
-    def track_time(self):
-        time_tracker = ValueTracker()
-        time_tracker.add_updater(lambda m, dt: m.increment_value(dt))
-        self.add(time_tracker)
-        self.get_time = time_tracker.get_value
-
-   
-  
-
-class BlocksAndWallExample(Scene):
+class AirPressure(Scene):
     CONFIG = {
         "sliding_blocks_config": {
             "block_config": {
@@ -211,6 +145,14 @@ class BlocksAndWallExample(Scene):
             }
         },
         "wait_time": 15,
+        "frequency" : 1,
+        "amplitude":2,
+        "A_color" : YELLOW,
+        "D_color" : PINK,
+        "F_color" : TEAL,
+        "C_color" : RED,
+        "sum_color" : GREEN,
+        "equilibrium_height" : 1.5,
     }
     def setup(self):
         self.track_time()
@@ -226,10 +168,56 @@ class BlocksAndWallExample(Scene):
         self.add(time_tracker)
         self.get_time = time_tracker.get_value
 
-
-
     def construct(self):
+        self.show_sine()
+
+    def show_sine(self):
+        axes = Axes(
+            y_min = -2, y_max = 2,
+            x_min = 0, x_max = 14,
+            number_line_config = {"include_tip" : False},
+        )
+        axes.stretch_to_fit_height(2)
+        axes.shift(4*LEFT)
+        axes.shift(DOWN)
+
+       
+        graph = self.get_wave_graph(axes)
+        func = graph.underlying_function
+        graph.set_color(self.A_color)
+
+        
+        self.play(
+            ShowCreation(graph, run_time = 6, rate_func=linear),
+            
+        )
+
+        
         self.wait(self.wait_time)
+
+    def get_wave_graph(self, axes):
+        tail_len = 1.0
+        x_min, x_max = axes.x_min, axes.x_max
+        def func(x):
+            value = self.amplitude*np.cos(2*np.pi*self.frequency*x)
+            if x - x_min < tail_len:
+                value *= smooth((x-x_min)/tail_len)
+            if x_max - x < tail_len:
+                value *= smooth((x_max - x )/tail_len)
+            return value + self.equilibrium_height
+        ngp = 2*(x_max - x_min)*self.frequency + 1
+        graph = axes.get_graph(func, num_graph_points = int(ngp))
+        return graph
+        
+        
+
+
+
+
+
+
+
+
 
 
 
@@ -253,12 +241,11 @@ class WhatIsATone(Scene):
 
     def construct(self):
         self.show_sine()
-        self.speaker()
 
     def show_sine(self):
         axes = Axes(
             y_min = -2, y_max = 2,
-            x_min = 0, x_max = 10,
+            x_min = 0, x_max = 14,
             number_line_config = {"include_tip" : False},
         )
         axes.stretch_to_fit_height(2)
