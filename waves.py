@@ -71,7 +71,7 @@ class Block(Rectangle):
         "mass": 1,
         "velocity": 0,
         "width": 0.1,
-        "height": 3.0,
+        "height": 8.0,
         "fill_opacity": 1,
         "stroke_width": 1,
         "stroke_color": WHITE,
@@ -85,9 +85,21 @@ class Block(Rectangle):
         Rectangle.__init__(self, side_length=self.width, **kwargs)
        
 
-    def get_points_defining_boundary(self):
-        return self.points
+class AirMolecule(Circle):
+    CONFIG = {
+        "velocity": 0,
+        "radius": 0.1,
+        "fill_opacity": 1,
+        "stroke_width": 0.1,
+        "stroke_color": BLUE,
+        "fill_color": BLUE,
+        
+    
+    }
 
+    def __init__(self, **kwargs):
+        digest_config(self, kwargs)
+        Circle.__init__(self, **kwargs)
 
 class SlidingBlocks(VGroup):
     CONFIG = {
@@ -107,12 +119,14 @@ class SlidingBlocks(VGroup):
         VGroup.__init__(self, **kwargs)
         self.scene = scene
         self.block = self.get_block(**self.block_config)
-        #self.phase_space_point_tracker = self.get_phase_space_point_tracker()
+        
+        self.point_field = self.get_points()
+        
         self.add(
             self.block,
-            #self.phase_space_point_tracker
         )
         self.add_updater(self.__class__.update_positions)
+
 
 
     def get_block(self, distance, **kwargs):
@@ -123,10 +137,27 @@ class SlidingBlocks(VGroup):
             DL,
         )
         return block
+
+    def get_points(self,**kwargs):
+        points = [x*RIGHT+y*UP
+            for x in np.arange(-2,6,0.25)
+            for y in np.arange(-4,4,0.25)
+            ]
+        point_field=[]
+        for point in points:
+            circle=AirMolecule().shift(point)
+            circle.x = point[0]
+            circle.y = point[1]
+            point_field.append(circle)
+            self.add(circle) 
+        return point_field
+            
+
   
     def update_positions(self, dt):
         block= self.block
         floor_y = self.floor_pos
+        #point_field = self.point_field
         self.timer +=dt
         ps_block= self.amplitude* np.sin(self.frequency* self.timer)
         block.move_to(
@@ -134,6 +165,15 @@ class SlidingBlocks(VGroup):
                 floor_y * UP,      
                 DL,
             )
+            
+        for point in self.point_field:
+            ps_point = point.x + self.amplitude*np.sin(self.frequency * (self.timer + point.x))
+            point.move_to(
+                (point.x+ ps_point) * RIGHT +
+                point.y * UP,      
+                DL,
+            )
+
 
 
 class AirPressure(Scene):
@@ -153,12 +193,18 @@ class AirPressure(Scene):
         "C_color" : RED,
         "sum_color" : GREEN,
         "equilibrium_height" : 1.5,
+        "plane_kwargs" : {},
     }
     def setup(self):
+        plane = NumberPlane(**self.plane_kwargs)
         self.track_time()
-        self.add_blocks()
+        self.add_blocks_and_points()
+        #self.add_points()
 
-    def add_blocks(self):
+        #self.add_speaker()
+        
+
+    def add_blocks_and_points(self):
         self.blocks = SlidingBlocks(self, **self.sliding_blocks_config)
         self.add(self.blocks)
 
@@ -168,8 +214,35 @@ class AirPressure(Scene):
         self.add(time_tracker)
         self.get_time = time_tracker.get_value
 
+    def add_speaker(self):
+        self.speaker = SVGMobject(file_name = "speaker.svg")
+        self.add(self.speaker)
+
+    def add_points(self):
+        self.points = [x*RIGHT+y*UP
+            for x in np.arange(-4,6,0.5)
+            for y in np.arange(-5,5,0.5)
+            ]
+               
+
+        self.point_field = [] 
+        for point in self.points:
+            circle=AirMolecule().shift(point)
+            circle.x = point[0]
+            circle.y = point[1]
+            self.point_field.append(circle)
+            self.add(circle) 
+            
+
     def construct(self):
-        self.show_sine()
+        #self.show_sine()
+        self.wait(5)
+        
+
+    def shift_circles(self):
+        for point in self.point_field:
+            point.shift(RIGHT)
+
 
     def show_sine(self):
         axes = Axes(
@@ -210,13 +283,6 @@ class AirPressure(Scene):
         return graph
         
         
-
-
-
-
-
-
-
 
 
 
