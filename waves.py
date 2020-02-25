@@ -10,7 +10,7 @@ class Block(Rectangle):
         "mass": 1,
         "velocity": 0,
         "width": 0.2,
-        "height": 10.0,
+        "height": 6.0,
         "fill_opacity": 1,
         "stroke_width": 1,
         "stroke_color": WHITE,
@@ -47,7 +47,7 @@ class SlidingBlocks(VGroup):
             "velocity": 0,
         },
         "membrane":-4.5,
-        "floor_pos":-2,
+        "floor_pos":-3,
         "amplitude": 0.2,
         "frequency":5,
         "timer":0,
@@ -69,7 +69,7 @@ class SlidingBlocks(VGroup):
     def get_block(self, distance, **kwargs):
         block = Block(**kwargs)
         block.move_to(
-            self.floor_pos * UP +
+            self.floor_pos * DOWN +
             (self.membrane + distance) * LEFT,
             DL,
         )
@@ -78,7 +78,7 @@ class SlidingBlocks(VGroup):
     def get_points(self,**kwargs):
         points = [x*RIGHT+y*UP
             for x in np.arange(-2,6,0.25)
-            for y in np.arange(-2,6,0.25)
+            for y in np.arange(-3,3,0.25)
             ]
         point_field=[]
         for point in points:
@@ -128,6 +128,12 @@ class WhatIsATone(Scene):
     }
 
     def construct(self):
+        self.question=TextMobject("Was ist ein Ton?")
+        self.question.scale_in_place(1.3)
+        self.play(FadeIn(self.question))
+        self.headline = deepcopy(self.question)
+        self.headline.shift(3*UP)
+        self.play(Transform(self.question,self.headline))
         self.show_sine()
 
     def show_sine(self):
@@ -414,32 +420,62 @@ class FrequencyPlot(Scene):
 
 class Instruments(Scene):
     def construct(self):
+        self.show_both()
+        self.list_instruments()
+        self.wait(5)
+
+    def show_both(self):
         question = TextMobject("Wie produzieren Instrumente Töne?")
         question.scale_in_place(1.3)
-        
         violin = SVGMobject("physik/violin.svg")
         sax = SVGMobject("physik/sax.svg")
-        violin.shift(3*LEFT+DOWN)
+        string = TextMobject("Saiteninstrumente")
+        self.string_heading = deepcopy(string)
+        self.string_heading.shift(3*UP)
+        self.string_heading.scale_in_place(1.3)
+        winds = TextMobject("Blasinstrumente")
+        string.scale_in_place(0.8)
+        winds.scale_in_place(0.8)
+        violin.shift(3*RIGHT+1.5*DOWN)
         violin.scale_in_place(1.7)
         sax.scale_in_place(1.5)
-        sax.shift(3*RIGHT+DOWN)
-        square1 = Square(side_length=4)
-        square2 = Square(side_length=4)
-        square1.shift(3*LEFT+DOWN)
-        square2.shift(3*RIGHT+DOWN)
+        sax.shift(3*LEFT+1.5*DOWN)
+        string.shift(3*RIGHT+UP)
+        winds.shift(3*LEFT+UP)
         self.play(GrowFromCenter(question))
         self.wait(2)
         headline = deepcopy(question)
         headline.shift(2.5*UP)
         self.play(Transform(question,headline))
-        self.play(GrowFromCenter(square1))
         self.wait(1)
-        self.play(FadeIn(violin))
-        self.wait(1)
-        self.play(GrowFromCenter(square2))
-        self.wait(1)
+        self.play(FadeIn(winds))
         self.play(FadeIn(sax))
-        self.wait(5)
+        self.wait(1)
+        self.play(FadeIn(string))
+        self.play(FadeIn(violin))
+        self.wait(2)
+        self.play(FadeOut(winds))
+        self.play(FadeOut(sax))
+        self.play(FadeOut(question))
+
+        self.play(Transform(string, self.string_heading))
+    
+
+    
+    def list_instruments(self):
+        piano = SVGMobject("physik/piano.svg")
+        guitar = SVGMobject("physik/guitar.svg")
+        cello = SVGMobject("physik/cello.svg")
+        guitar.scale_in_place(0.6)
+        cello.scale_in_place(1.6)
+        cello.shift(UP+5*LEFT)
+        piano.shift(1.5*DOWN+LEFT)
+        guitar.shift(5*RIGHT+2*UP)
+        self.play(FadeIn(cello))
+        self.play(FadeIn(guitar))
+        self.play(FadeIn(piano))
+
+
         
     
 
@@ -463,18 +499,18 @@ class StringWithNodes(Scene):
         self.headline=TextMobject("Wie produzieren Instrumente Töne?")
         self.headline.scale_in_place(1.3)
         self.headline.shift(3*UP)
-        left_node= Circle(radius=0.1)
+        left_node= Circle(radius=0.1, fill_color=RED, fill_opacity= 1)
         self.left_node = left_node
         self.left_node.shift(self.axes.x_min*RIGHT)
-        right_node= Circle(radius=0.1)
+        right_node= Circle(radius=0.1, fill_color=RED, fill_opacity= 1)
         self.right_node = right_node
         self.right_node.shift(self.axes.x_max*RIGHT)
-        center_node= Circle(radius=0.1)
+        center_node= Circle(radius=0.1, fill_color=RED, fill_opacity= 1)
         self.center_node = center_node
-        first_third_node= Circle(radius=0.1)
+        first_third_node= Circle(radius=0.1, fill_color=RED, fill_opacity= 1)
         self.first_third_node = first_third_node
         self.first_third_node.shift(self.axes.x_min/3*RIGHT)
-        second_third_node= Circle(radius=0.1)
+        second_third_node= Circle(radius=0.1, fill_color=RED, fill_opacity= 1)
         self.second_third_node = second_third_node
         self.second_third_node.shift(self.axes.x_max/3*RIGHT)
 
