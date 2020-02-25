@@ -443,59 +443,8 @@ class Instruments(Scene):
         
     
 
-class StringVibration(VGroup):
-    CONFIG = {
-        "frequency" : 2.1,
-        "color" : YELLOW,
-        "equilibrium_height" : 0,
-        "amplitude": 1,
-        "plane_kwargs" : {},
-    }
 
-    def __init__(self, scene, **kwargs):
-        VGroup.__init__(self, **kwargs)
-
-        self.timer= 0
-        self.scene = scene
-        self.string = self.get_string()
-        self.add(self.string)                
-        self.add_updater(self.__class__.update_positions)
-    
-    def get_string(self):
-        self.axes = Axes(
-            y_min = -2, y_max = 2,
-            x_min = -3, x_max = 10,
-            number_line_config = {"include_tip" : False},
-        )
-        graph = self.get_wave_graph()
-        return graph
-
-    def update_positions(self, dt):
-        string = self.string
-        self.timer += dt
-        self.amplitude = np.sin(self.timer)
-        new_graph = self.get_wave_graph()
-        #string.shift(UP)
-        Transform(string, new_graph)
-        #string = new_graph
-        
-        
-    
-        
-
-    def get_wave_graph(self):
-        #tail_len = 1.0
-        x_min, x_max = self.axes.x_min, self.axes.x_max
-        def func(x):
-            value = self.amplitude*np.cos(2*np.pi*self.frequency*x)
-            return value + self.equilibrium_height
-        ngp = 2*(x_max - x_min)*self.frequency + 1
-        graph = self.axes.get_graph(func, num_graph_points = int(ngp))
-        return graph
-
-
-
-class VibratingString(Scene):
+class StringWithNodes(Scene):
     CONFIG = {
         "frequency" : 0.05,
         "color" : YELLOW,
@@ -511,50 +460,82 @@ class VibratingString(Scene):
             x_min = -5, x_max = 5,
             number_line_config = {"include_tip" : False},
         )
+        self.headline=TextMobject("Wie produzieren Instrumente Töne?")
+        self.headline.scale_in_place(1.3)
+        self.headline.shift(3*UP)
+        left_node= Circle(radius=0.1)
+        self.left_node = left_node
+        self.left_node.shift(self.axes.x_min*RIGHT)
+        right_node= Circle(radius=0.1)
+        self.right_node = right_node
+        self.right_node.shift(self.axes.x_max*RIGHT)
+        center_node= Circle(radius=0.1)
+        self.center_node = center_node
+        first_third_node= Circle(radius=0.1)
+        self.first_third_node = first_third_node
+        self.first_third_node.shift(self.axes.x_min/3*RIGHT)
+        second_third_node= Circle(radius=0.1)
+        self.second_third_node = second_third_node
+        self.second_third_node.shift(self.axes.x_max/3*RIGHT)
+
+
+        
+        
+
        
         
 
 
     def construct(self):
+        self.play(ShowCreation(self.headline))
         self.pure_frequency()
         self.first_ot()
         self.second_ot()
         
     
     def pure_frequency(self):
+        
         string = self.get_wave_graph()
         #self.string = string
         state1 = self.get_wave_graph() 
-        self.amplitude = -1
+        self.amplitude *= -1
         state2 = self.get_wave_graph()        
         #self.state2 = string2
+        self.play(FadeIn(self.left_node))
+        self.play(FadeIn(self.right_node))
+        self.play(ShowCreation(string))
         self.play(Transform(string,state2),run_time=(2))
         self.play(Transform(string,state1),run_time=(2))
         self.play(FadeOut(string))
 
     def first_ot(self):
-        self.amplitude=1
+        self.amplitude *= -1
         self.frequency = self.frequency*2
         string = self.get_wave_graph()
         self.string = string
         state1 = self.get_wave_graph() 
-        self.amplitude = -1
+        self.amplitude *= -1
         state2 = self.get_wave_graph()        
         #self.state2 = string2
+        self.play(FadeIn(self.center_node))
+        self.play(ShowCreation(string))
         self.play(Transform(string,state2),run_time=(2))
         self.play(Transform(string,state1),run_time=(2))
         self.play(FadeOut(string))
+        self.play(FadeOut(self.center_node))
+
 
 
     def second_ot(self):
-        self.amplitude=1
+        self.amplitude *= -1
         self.frequency = self.frequency/2*3
         string = self.get_wave_graph()
-        #self.string = string
         state1 = self.get_wave_graph() 
-        self.amplitude = -1
-        state2 = self.get_wave_graph()        
-        #self.state2 = string2
+        self.amplitude *= -1
+        state2 = self.get_wave_graph()
+        self.play(FadeIn(self.first_third_node))
+        self.play(FadeIn(self.second_third_node))               
+        self.play(ShowCreation(string))
         self.play(Transform(string,state2),run_time=(2))
         self.play(Transform(string,state1),run_time=(2))
 
