@@ -26,7 +26,7 @@ class Block(Rectangle):
 class AirMolecule(Circle):
     CONFIG = {
         "velocity": 0,
-        "radius": 0.1,
+        "radius": 0.08,
         "fill_opacity": 1,
         "stroke_width": 0.1,
         "stroke_color": BLUE,
@@ -48,8 +48,8 @@ class SlidingBlocks(VGroup):
         },
         "membrane":-4.5,
         "floor_pos":-3,
-        "amplitude": 0.2,
-        "frequency":5,
+        "amplitude": 0.4, #0.4
+        "frequency":3, #1
         "timer":0,
     }
 
@@ -77,8 +77,8 @@ class SlidingBlocks(VGroup):
 
     def get_points(self,**kwargs):
         points = [x*RIGHT+y*UP
-            for x in np.arange(-2,6,0.25)
-            for y in np.arange(-3,3,0.25)
+            for x in np.arange(-4.1,8,0.25) #-4
+            for y in np.arange(-3,3,0.25) 
             ]
         point_field=[]
         for point in points:
@@ -94,9 +94,9 @@ class SlidingBlocks(VGroup):
     def update_positions(self, dt):
         block= self.block
         floor_y = self.floor_pos
-        #point_field = self.point_field
+        #point_field = self.point_fieldmju765
         self.timer +=dt
-        ps_block= self.amplitude* np.sin(self.frequency* self.timer)
+        ps_block= self.amplitude* np.sin(self.frequency*self.timer )
         block.move_to(
                 (self.membrane+ ps_block) * RIGHT +
                 floor_y * UP,      
@@ -104,7 +104,7 @@ class SlidingBlocks(VGroup):
             )
             
         for point in self.point_field:
-            ps_point = point.x + self.amplitude*np.cos(self.frequency * (self.timer - point.x))
+            ps_point = self.amplitude*np.sin(self.frequency * (self.timer - point.x)) #cos
             point.move_to(
                 (point.x+ ps_point) * RIGHT +
                 point.y * UP,      
@@ -114,6 +114,63 @@ class SlidingBlocks(VGroup):
 
 
 
+class MovingString(VGroup):
+    CONFIG = {
+        "amplitude": 0.5,
+        "frequency":0.25,
+        "timer":0,
+    }
+
+    def __init__(self, scene, **kwargs):
+        VGroup.__init__(self, **kwargs)
+        self.scene = scene
+        self.point_field = self.get_points()
+        self.add_updater(self.__class__.update_positions)
+
+
+
+    def get_block(self, distance, **kwargs):
+        block = Block(**kwargs)
+        block.move_to(
+            self.floor_pos * DOWN +
+            (self.membrane + distance) * LEFT,
+            DL,
+        )
+        return block
+
+    def get_points(self,**kwargs):
+        points = [x*RIGHT
+            for x in np.arange(-2*np.pi,2*np.pi,np.pi/20)
+            for y in np.arange(-3,3,0.3)
+            ]
+        point_field=[]
+        for point in points:
+            circle=AirMolecule().shift(point)
+            circle.x = point[0]
+            circle.y = 0
+            point_field.append(circle)
+            self.add(circle) 
+        return point_field
+            
+
+  
+    def update_positions_working(self, dt):
+        self.timer +=dt
+        
+        for point in self.point_field:
+
+            ps_point = (self.amplitude*np.sin(self.timer*5))*np.cos(self.frequency*point.x) 
+            #ps_point += ((self.amplitude*np.sin(self.timer*5))*np.sin(self.frequency*4*point.x))/4
+            ps_point +=  (self.amplitude*np.sin(self.timer*5)*np.sin(self.frequency*6*point.x))/4
+            ps_point +=  (self.amplitude*np.sin(self.timer*5)*np.sin(self.frequency*8*point.x))/4
+            ps_point +=  (self.amplitude*np.sin(self.timer*5)*np.sin(self.frequency*10*point.x))/4
+            point.move_to(
+                point.x*RIGHT+
+                (ps_point) * UP,   
+                DL   
+            )
+
+        
 
 
 class WhatIsATone(Scene):
@@ -204,7 +261,7 @@ class WhatIsATone(Scene):
         return graph
         
  
-class AirPressure(Scene):
+class AirPressureFast(Scene):
     CONFIG = {
         "sliding_blocks_config": {
             "block_config": {
@@ -212,7 +269,7 @@ class AirPressure(Scene):
                 "velocity": -2,
             }
         },
-        "wait_time": 15,
+        "wait_time": 10,
         "frequency" : 1,
         "amplitude":2,
         "A_color" : YELLOW,
@@ -243,7 +300,7 @@ class AirPressure(Scene):
 
 
     def construct(self):
-        self.wait(15)
+        self.wait(10)
         
 
 
@@ -260,8 +317,7 @@ class AirPressure(Scene):
         ngp = 2*(x_max - x_min)*self.frequency + 1
         graph = axes.get_graph(func, num_graph_points = int(ngp))
         return graph
-        
-              
+                   
 
 class FrequencyPlot(Scene):
     CONFIG = {
@@ -422,13 +478,14 @@ class Instruments(Scene):
     def construct(self):
         self.show_both()
         self.list_instruments()
+        self.forced_motion()
         self.wait(5)
 
     def show_both(self):
         question = TextMobject("Wie produzieren Instrumente Töne?")
         question.scale_in_place(1.3)
-        violin = SVGMobject("physik/violin.svg")
-        sax = SVGMobject("physik/sax.svg")
+        self.violin = SVGMobject("physik/violin.svg")
+        sax = SVGMobject("physik/sax.svg", stroke_width=0.1)
         string = TextMobject("Saiteninstrumente")
         self.string_heading = deepcopy(string)
         self.string_heading.shift(3*UP)
@@ -436,8 +493,8 @@ class Instruments(Scene):
         winds = TextMobject("Blasinstrumente")
         string.scale_in_place(0.8)
         winds.scale_in_place(0.8)
-        violin.shift(3*RIGHT+1.5*DOWN)
-        violin.scale_in_place(1.7)
+        self.violin.shift(3*RIGHT+1.5*DOWN)
+        self.violin.scale_in_place(1.7)
         sax.scale_in_place(1.5)
         sax.shift(3*LEFT+1.5*DOWN)
         string.shift(3*RIGHT+UP)
@@ -450,12 +507,11 @@ class Instruments(Scene):
         self.wait(1)
         self.play(FadeIn(winds))
         self.play(FadeIn(sax))
-        self.wait(1)
         self.play(FadeIn(string))
-        self.play(FadeIn(violin))
+        self.play(FadeIn(self.violin))
         self.wait(2)
-        self.play(FadeOut(winds))
-        self.play(FadeOut(sax))
+        self.remove(winds)
+        self.remove(sax)
         self.play(FadeOut(question))
 
         self.play(Transform(string, self.string_heading))
@@ -463,9 +519,9 @@ class Instruments(Scene):
 
     
     def list_instruments(self):
-        piano = SVGMobject("physik/piano.svg")
-        guitar = SVGMobject("physik/guitar.svg")
-        cello = SVGMobject("physik/cello.svg")
+        piano = SVGMobject("physik/piano.svg",stroke_width=0.1)
+        guitar = SVGMobject("physik/guitar.svg",stroke_width=0.1)
+        cello = SVGMobject("physik/cello.svg",stroke_width=0.1)
         guitar.scale_in_place(0.6)
         cello.scale_in_place(1.6)
         cello.shift(UP+5*LEFT)
@@ -474,10 +530,29 @@ class Instruments(Scene):
         self.play(FadeIn(cello))
         self.play(FadeIn(guitar))
         self.play(FadeIn(piano))
+        self.wait(5)
+        self.remove(self.violin,guitar,piano,cello)
 
-
-        
-    
+    def forced_motion(self):
+        cello = SVGMobject("physik/cello.svg",stroke_width=0.1)
+        cello.scale_in_place(2.5)
+        cello.shift(0.5*DOWN)
+        #big_violin.move_to(3*LEFT+1.5*UP)
+        #big_violin.scale_in_place(1.5)
+        bow = SVGMobject("physik/bow.svg",stroke_width=0.1) 
+        bow.scale_in_place(0.1)
+        bow.shift(1.1*DOWN)
+        bow1 = bow.deepcopy()
+        bow2 = bow.deepcopy()
+        bow1.shift(RIGHT)
+        bow2.shift(LEFT)
+        self.play(FadeIn(cello))
+        self.wait(1)
+        self.play(FadeIn(bow))
+        self.play(Transform(bow,bow2),run_time=2)
+        self.play(Transform(bow,bow1),run_time=2)
+        self.play(Transform(bow,bow2),run_time=2)
+        self.play(Transform(bow,bow1),run_time=2)
 
 
 class StringWithNodes(Scene):
@@ -496,9 +571,9 @@ class StringWithNodes(Scene):
             x_min = -5, x_max = 5,
             number_line_config = {"include_tip" : False},
         )
-        self.headline=TextMobject("Wie produzieren Instrumente Töne?")
-        self.headline.scale_in_place(1.3)
-        self.headline.shift(3*UP)
+        # self.headline=TextMobject("Wie produzieren Instrumente Töne?")
+        # self.headline.scale_in_place(1.3)
+        # self.headline.shift(3*UP)
         left_node= Circle(radius=0.1, fill_color=RED, fill_opacity= 1)
         self.left_node = left_node
         self.left_node.shift(self.axes.x_min*RIGHT)
@@ -512,21 +587,15 @@ class StringWithNodes(Scene):
         self.first_third_node.shift(self.axes.x_min/3*RIGHT)
         second_third_node= Circle(radius=0.1, fill_color=RED, fill_opacity= 1)
         self.second_third_node = second_third_node
-        self.second_third_node.shift(self.axes.x_max/3*RIGHT)
-
-
-        
-        
-
-       
-        
+        self.second_third_node.shift(self.axes.x_max/3*RIGHT)      
 
 
     def construct(self):
-        self.play(ShowCreation(self.headline))
+        #self.play(ShowCreation(self.headline))
         self.pure_frequency()
         self.first_ot()
         self.second_ot()
+        self.wave_graph()
         
     
     def pure_frequency(self):
@@ -574,6 +643,17 @@ class StringWithNodes(Scene):
         self.play(ShowCreation(string))
         self.play(Transform(string,state2),run_time=(2))
         self.play(Transform(string,state1),run_time=(2))
+        self.play(FadeOut(string))
+        self.play(FadeOut(self.left_node))
+        self.play(FadeOut(self.first_third_node))
+        self.play(FadeOut(self.second_third_node))
+        self.play(FadeOut(self.right_node))
+        
+
+    def wave_graph(self):
+        graph = self.get_complex_graph()
+        self.play(ShowCreation(graph))
+        self.wait(5)
 
 
 
@@ -588,3 +668,233 @@ class StringWithNodes(Scene):
         ngp = 2*(x_max - x_min)*frequency + 1
         graph = axes.get_graph(func, num_graph_points = int(ngp))
         return graph
+
+    def get_complex_graph(self):
+        axes = self.axes
+        frequency = 1.2
+        x_min, x_max = axes.x_min, axes.x_max
+        def func(x):
+            value = self.amplitude*np.sin(2*np.pi*frequency*(x-x_min))
+            value += (self.amplitude/1.5)*np.sin(2*np.pi*frequency*(x-x_min)*2)
+            value += (self.amplitude/1)*np.sin(2*np.pi*frequency*(x-x_min)*3)
+            value += (self.amplitude/2)*np.sin(2*np.pi*frequency*(x-x_min)*4)
+            value += (self.amplitude/1)*np.sin(2*np.pi*frequency*(x-x_min)*5)
+            return value + self.equilibrium_height
+        ngp = 2*(x_max - x_min)*frequency + 1
+        graph = axes.get_graph(func, num_graph_points = int(ngp))
+        return graph
+
+
+class ComplexOscillation(Scene):
+
+    CONFIG = {
+        "sliding_blocks_config": {
+            "block_config": {
+                "mass": 1e0,
+                "velocity": -2,
+            }
+        },
+        "wait_time": 15,
+        "frequency" : 0.5,
+        "amplitude":2,
+        "A_color" : YELLOW,
+        "D_color" : PINK,
+        "F_color" : TEAL,
+        "C_color" : RED,
+        "sum_color" : GREEN,
+        "equilibrium_height" : 1.5,
+        "plane_kwargs" : {},
+    }
+    def setup(self):
+        plane = NumberPlane(**self.plane_kwargs)
+        self.track_time()
+        self.add_points()
+       
+        
+
+    def add_points(self):
+        self.blocks = MovingString(self, **self.sliding_blocks_config)
+        self.add(self.blocks)
+
+    def track_time(self):
+        time_tracker = ValueTracker()
+        time_tracker.add_updater(lambda m, dt: m.increment_value(dt))
+        self.add(time_tracker)
+        self.get_time = time_tracker.get_value
+
+
+
+    def construct(self):
+        self.wait(5)
+
+
+class AddingFrequencies(Scene):
+    CONFIG = {
+        "equilibrium_height" : 1.5,
+        "amplitude" : 1,
+        "freq1" : 2,
+        "freq2" : 4,
+        "freq3" : 6,
+    }
+    def setup(self):
+        axes = Axes(
+                y_min = -2, y_max = 2,
+                x_min = 0, x_max = 12,
+            )
+        x_min, x_max = axes.x_min, axes.x_max
+        def func(x):
+            value = self.amplitude*np.cos(2*np.pi*self.freq1*x) + self.amplitude/2*np.cos(2*np.pi*self.freq2*x) + self.amplitude/3*np.cos(2*np.pi*self.freq3*x)
+            return value + self.equilibrium_height
+        ngp = 2*(x_max - x_min)*self.freq1 + 1
+        self.graph = axes.get_graph(func, num_graph_points = int(ngp))
+        self.play(FadeIn(self.graph))
+    
+        
+    
+
+    def get_wave_graph(self, frequency, axes):
+        x_min, x_max = axes.x_min, axes.x_max
+        def func(x):
+            value = 0.7*np.cos(2*np.pi*frequency*x)
+            return value + self.equilibrium_height
+        ngp = 2*(x_max - x_min)*frequency + 1
+        graph = axes.get_graph(func, num_graph_points = int(ngp))
+        return graph
+
+
+
+class Opening(Scene):
+    def construct(self):
+        blob = Circle()
+        brace = SpeechBubble()
+        self.play(FadeIn(blob, brace))
+
+
+class HarmonicSeries(Scene):
+    CONFIG = {
+        "fund_color" : YELLOW,
+        "first_color" : PINK,
+        "second_color" : TEAL,
+        "third_color" : RED,
+        "sum_color" : GREEN,
+        "equilibrium_height" : 1,
+    }
+    def setup(self):
+        self.axes = Axes(
+            y_min = -2, y_max = 2,
+            x_min = -4, x_max = 6,
+            number_line_config = {"include_tip" : False},
+        )
+
+    
+    def construct(self):
+        self.fundamental()
+        self.first_ot()
+        self.second_ot()
+        self.third_ot()
+        self.combine()
+        self.wait(5)
+
+    def fundamental(self):
+        axes = self.axes
+        axes.shift(1.5*UP)
+        frequency = 0.25
+        self.graph0 = self.get_wave_graph(frequency,axes)
+        self.label0 = TextMobject("Grundton") 
+        self.label0.next_to(self.graph0,LEFT)  
+        self.play(FadeIn(self.label0))
+        self.play(ShowCreation(self.graph0))
+
+    def first_ot(self):
+        axes = self.axes
+        axes.shift(1.7*DOWN)
+        frequency = 0.5
+        self.graph1 = self.get_wave_graph(frequency,axes)
+        self.label1 = TextMobject("1. Oberton") 
+        self.label1.next_to(self.graph1,LEFT)  
+        self.play(FadeIn(self.label1))
+        self.play(ShowCreation(self.graph1))
+
+    def second_ot(self):
+        axes = self.axes
+        axes.shift(1.7*DOWN)
+        frequency = 0.75
+        self.graph2 = self.get_wave_graph(frequency,axes)
+        self.label2 = TextMobject("2. Oberton") 
+        self.label2.next_to(self.graph2,LEFT)  
+        self.play(FadeIn(self.label2))
+        self.play(ShowCreation(self.graph2))
+
+    def third_ot(self):
+        axes = self.axes
+        axes.shift(1.7*DOWN)
+        frequency = 1
+        self.graph3 = self.get_wave_graph(frequency,axes)
+        self.label3 = TextMobject("3. Oberton") 
+        self.label3.next_to(self.graph3,LEFT)  
+        self.play(FadeIn(self.label3))
+        self.play(ShowCreation(self.graph3))
+
+    def combine(self):
+        #self.add(self.graph1)
+        axes = Axes(
+            y_min = -2, y_max = 2,
+            x_min = -4, x_max = 6,
+            number_line_config = {"include_tip" : False},
+        )
+        axes.shift(1.5*UP)
+        def func1(x):
+            value =  0.5*np.cos(2*np.pi*0.25*(x-axes.x_min))
+            value += 0.5*np.cos(2*np.pi*0.5*(x-axes.x_min))
+            return value + self.equilibrium_height
+        ngp = 2*(axes.x_max - axes.x_min)*1 + 1
+        sum1 = axes.get_graph(func1, num_graph_points = int(ngp))
+        def func2(x):
+            value =  0.5*np.cos(2*np.pi*0.25*(x-axes.x_min))
+            value += 0.5*np.cos(2*np.pi*0.5*(x-axes.x_min))
+            value += 0.5*np.cos(2*np.pi*0.75*(x-axes.x_min))
+            return value + self.equilibrium_height
+        ngp = 2*(axes.x_max - axes.x_min)*1 + 1
+        sum2 = axes.get_graph(func2, num_graph_points = int(ngp))
+        def func3(x):
+            value =  0.5*np.cos(2*np.pi*0.25*(x-axes.x_min))
+            value += 0.5*np.cos(2*np.pi*0.5*(x-axes.x_min))
+            value += 0.4*np.cos(2*np.pi*0.75*(x-axes.x_min))
+            value += 0.25*np.cos(2*np.pi*0.1*(x-axes.x_min))
+            return value + self.equilibrium_height
+        ngp = 2*(axes.x_max - axes.x_min)*1 + 1
+        sum3 = axes.get_graph(func3, num_graph_points = int(ngp))
+
+        self.remove(self.label0, self.label1, self.label2, self.label3)
+        self.play(ReplacementTransform(self.graph1, self.graph0, run_time=0.25))
+        self.play(ReplacementTransform(self.graph0, sum1, run_time=0.4))
+        self.play(ReplacementTransform(self.graph2, sum1, run_time=0.6))
+        self.play(ReplacementTransform(sum1, sum2,run_time=0.3))
+        self.play(ReplacementTransform(self.graph3, sum2, run_time=0.8))
+        self.play(ReplacementTransform(sum2, sum3,run_time=0.3))
+        centered_sum= sum3.deepcopy()
+        centered_sum.shift(2.5*DOWN)
+        self.play(Transform(sum3,centered_sum))
+
+
+    
+
+    
+
+
+    def get_wave_graph(self, frequency, axes):
+        tail_len = 0.5
+        x_min, x_max = axes.x_min, axes.x_max
+        def func(x):
+            value = 0.5*np.cos(2*np.pi*frequency*x)
+            if x - x_min < tail_len:
+                value *= smooth((x-x_min)/tail_len)
+            if x_max - x < tail_len:
+                value *= smooth((x_max - x )/tail_len)
+            return value + self.equilibrium_height
+        ngp = 2*(x_max - x_min)*frequency + 1
+        graph = axes.get_graph(func, num_graph_points = int(ngp))
+        return graph
+
+
+#class Woodwinds(Scene):
