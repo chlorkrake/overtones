@@ -8,21 +8,6 @@ USE_ALMOST_FOURIER_BY_DEFAULT = True
 NUM_SAMPLES_FOR_FFT = 1000
 DEFAULT_COMPLEX_TO_REAL_FUNC = lambda z : z.real
 
-def get_fourier_transform(
-    func, t_min, t_max, 
-    complex_to_real_func = DEFAULT_COMPLEX_TO_REAL_FUNC,
-    use_almost_fourier = USE_ALMOST_FOURIER_BY_DEFAULT,
-    **kwargs ##Just eats these
-    ):
-    scalar = 1./(t_max - t_min) if use_almost_fourier else 1.0
-    def fourier_transform(f):
-        z = scalar*scipy.integrate.quad(
-            lambda t : func(t)*np.exp(complex(0, -TAU*f*t)),
-            t_min, t_max
-        )[0]
-        return complex_to_real_func(z)
-    return fourier_transform
-
 
 class Block(Rectangle):
     CONFIG = {
@@ -1097,3 +1082,139 @@ class Fourier(GraphScene):
         self.small_changes()
         self.wait(5)
 
+class Computer(GraphScene):
+    def construct(self):
+        self.show_question()
+        self.show_laptop()
+        self.cest_moi()
+
+    def show_question(self):
+        question= TextMobject("Wie können Computer Instrumente imitieren?")
+        question.scale_in_place(1.2)
+        headline = question.copy()
+        headline.shift(3*UP)
+        self.play(ShowCreation(question))
+        self.wait(1)
+        self.play(Transform(question, headline))
+        self.headline = question
+
+    def show_laptop(self):
+        axes = Axes(
+            y_min = -0.5, y_max = 0.5,
+            x_min = -0.92, x_max = 1.6,
+        )
+        laptop = ImageMobject("physik/laptop_1.png")
+        laptop.scale_in_place(2.5)
+        laptop.shift(DOWN)
+        laptop_eyes = ImageMobject("physik/laptop_5.png")
+        laptop_eyes.scale_in_place(2.5)
+        laptop_eyes.shift(DOWN)
+        laptop_sax = ImageMobject("physik/laptop_2.png")
+        laptop_sax.scale_in_place(2.5)
+        laptop_sax.shift(DOWN)
+        laptop_drums = ImageMobject("physik/laptop_3.png")
+        laptop_drums.scale_in_place(2.5)
+        laptop_drums.shift(DOWN)
+        laptop_bass = ImageMobject("physik/laptop_4.png")
+        laptop_bass.scale_in_place(2.5)
+        laptop_bass.shift(DOWN)
+        bubble = ImageMobject("physik/thought.png")
+        bubble.scale_in_place(1.5)
+        bubble.shift(4*RIGHT+2*UP)
+        q_sign = TextMobject("?")
+        q_sign.scale_in_place(3)
+        q_sign.shift(4.3*RIGHT+2*UP)
+        overtone = TextMobject("Obertöne!")
+        overtone.scale_in_place(1.3)
+        overtone.shift(4.3*RIGHT+2*UP)
+        sine = self.get_wave_graph(5, axes)
+
+
+        self.play(FadeIn(laptop))
+        self.wait(1)
+        self.play(Transform(laptop,laptop_sax))
+        self.play(ShowCreation(sine))
+        self.wait(2)
+        self.play(
+            Transform(laptop,laptop_drums),
+            FadeOut(sine),
+            )
+        self.wait(0.5)
+        self.play(Transform(laptop,laptop_bass))
+        self.wait(1)
+        self.play(
+            Transform(laptop,laptop_eyes),
+            FadeOut(self.headline),
+            )
+        self.wait(1)
+        self.play(
+            FadeIn(bubble),
+            FadeIn(q_sign),
+            )
+        self.wait(3)
+        self.play(Transform(q_sign,overtone))        
+        self.wait(5)
+        self.play(
+            FadeOut(laptop),
+            FadeOut(bubble),
+            FadeOut(q_sign)
+        )
+        
+
+    def cest_moi(self):
+        foo = ImageMobject("physik/fourier_1.png")
+        foo.scale_in_place(4)
+        foo.shift(0.5*DOWN)
+        bubble=ImageMobject("physik/speech_1.png")
+        bubble.scale_in_place(1.7)
+        text = TextMobject("c'est moi")
+        text.scale_in_place(1.6)
+        text.shift(4*RIGHT+2.8*UP)
+        bubble.shift(4*RIGHT+2.3*UP)
+        
+        self.play(FadeIn(foo))
+        self.play(
+            FadeIn(bubble),
+            FadeIn(text),
+            )
+        self.wait(5)
+
+    def get_wave_graph(self, frequency, axes):
+        tail_len = 0
+        x_min, x_max = axes.x_min, axes.x_max
+        def func(x):
+            value = 0.2*np.cos(2*np.pi*frequency*x)
+            if x - x_min < tail_len:
+                value *= smooth((x-x_min)/tail_len)
+            if x_max - x < tail_len:
+                value *= smooth((x_max - x )/tail_len)
+            return value #+ self.equilibrium_height
+        ngp = 2*(x_max - x_min)*frequency + 1
+        graph = axes.get_graph(func, num_graph_points = int(ngp))
+        return graph
+
+
+class Comic(Scene):
+    def construct(self):
+        scale_factor=4
+        comic = ImageMobject("physik/comic_1.png")
+        comic.scale_in_place(scale_factor)
+        comic_2 = ImageMobject("physik/comic_2.png")
+        comic_2.scale_in_place(scale_factor)
+        comic_3 = ImageMobject("physik/comic_3.png")
+        comic_3.scale_in_place(scale_factor)
+        comic_4 = ImageMobject("physik/comic_4.png")
+        comic_4.scale_in_place(scale_factor)
+        comic_5 = ImageMobject("physik/comic_5.png")
+        comic_5.scale_in_place(scale_factor)
+
+        self.play(FadeIn(comic))
+        self.wait(2)
+        self.play(Transform(comic,comic_2))
+        self.wait(2)
+        self.play(Transform(comic,comic_3))
+        self.wait(2)
+        self.play(Transform(comic,comic_4))
+        self.wait(3)
+        self.play(Transform(comic,comic_5))
+        self.wait(3)
