@@ -4,6 +4,25 @@ import scipy.integrate
 
 from manimlib.imports import *
 
+USE_ALMOST_FOURIER_BY_DEFAULT = True
+NUM_SAMPLES_FOR_FFT = 1000
+DEFAULT_COMPLEX_TO_REAL_FUNC = lambda z : z.real
+
+def get_fourier_transform(
+    func, t_min, t_max, 
+    complex_to_real_func = DEFAULT_COMPLEX_TO_REAL_FUNC,
+    use_almost_fourier = USE_ALMOST_FOURIER_BY_DEFAULT,
+    **kwargs ##Just eats these
+    ):
+    scalar = 1./(t_max - t_min) if use_almost_fourier else 1.0
+    def fourier_transform(f):
+        z = scalar*scipy.integrate.quad(
+            lambda t : func(t)*np.exp(complex(0, -TAU*f*t)),
+            t_min, t_max
+        )[0]
+        return complex_to_real_func(z)
+    return fourier_transform
+
 
 class Block(Rectangle):
     CONFIG = {
@@ -763,11 +782,28 @@ class AddingFrequencies(Scene):
 
 
 
-class Opening(Scene):
+class Intro(Scene):
     def construct(self):
-        blob = Circle()
-        brace = SpeechBubble()
-        self.play(FadeIn(blob, brace))
+        self.show_questions()
+        self.wait(5)
+
+    def show_questions(self):
+        tone = TextMobject("Was sind Töne?")
+        tone.scale_in_place(1.3)
+        tone.shift(2*UP)
+        instrument = TextMobject("Wie produzieren Instrumente Töne?")
+        instrument.scale_in_place(1.3)
+        computer = TextMobject("Wie können Computer Instrumente imitieren?")
+        computer.scale_in_place(1.3)
+        computer.shift(2*DOWN)
+
+        self.play(FadeIn(tone))
+        self.wait(0.5)
+        self.play(FadeIn(instrument))
+        self.wait(1)
+        self.play(FadeIn(computer))
+
+    
 
 
 class HarmonicSeries(Scene):
@@ -797,7 +833,7 @@ class HarmonicSeries(Scene):
 
     def fundamental(self):
         axes = self.axes
-        axes.shift(1.5*UP)
+        axes.shift(1.3*UP)
         frequency = 0.25
         self.graph0 = self.get_wave_graph(frequency,axes)
         self.label0 = TextMobject("Grundton") 
@@ -842,24 +878,24 @@ class HarmonicSeries(Scene):
             x_min = -4, x_max = 6,
             number_line_config = {"include_tip" : False},
         )
-        axes.shift(1.5*UP)
+        axes.shift(1.3*UP)
         def func1(x):
-            value =  0.5*np.cos(2*np.pi*0.25*(x-axes.x_min))
-            value += 0.5*np.cos(2*np.pi*0.5*(x-axes.x_min))
+            value =  0.4*np.cos(2*np.pi*0.25*(x-axes.x_min))
+            value += 0.4*np.cos(2*np.pi*0.5*(x-axes.x_min))
             return value + self.equilibrium_height
         ngp = 2*(axes.x_max - axes.x_min)*1 + 1
         sum1 = axes.get_graph(func1, num_graph_points = int(ngp))
         def func2(x):
-            value =  0.5*np.cos(2*np.pi*0.25*(x-axes.x_min))
-            value += 0.5*np.cos(2*np.pi*0.5*(x-axes.x_min))
-            value += 0.5*np.cos(2*np.pi*0.75*(x-axes.x_min))
+            value =  0.3*np.cos(2*np.pi*0.25*(x-axes.x_min))
+            value += 0.3*np.cos(2*np.pi*0.5*(x-axes.x_min))
+            value += 0.3*np.cos(2*np.pi*0.75*(x-axes.x_min))
             return value + self.equilibrium_height
         ngp = 2*(axes.x_max - axes.x_min)*1 + 1
         sum2 = axes.get_graph(func2, num_graph_points = int(ngp))
         def func3(x):
-            value =  0.5*np.cos(2*np.pi*0.25*(x-axes.x_min))
-            value += 0.5*np.cos(2*np.pi*0.5*(x-axes.x_min))
-            value += 0.4*np.cos(2*np.pi*0.75*(x-axes.x_min))
+            value =  0.3*np.cos(2*np.pi*0.25*(x-axes.x_min))
+            value += 0.3*np.cos(2*np.pi*0.5*(x-axes.x_min))
+            value += 0.3*np.cos(2*np.pi*0.75*(x-axes.x_min))
             value += 0.25*np.cos(2*np.pi*0.1*(x-axes.x_min))
             return value + self.equilibrium_height
         ngp = 2*(axes.x_max - axes.x_min)*1 + 1
@@ -872,7 +908,16 @@ class HarmonicSeries(Scene):
         self.play(ReplacementTransform(sum1, sum2,run_time=0.3))
         self.play(ReplacementTransform(self.graph3, sum2, run_time=0.8))
         self.play(ReplacementTransform(sum2, sum3,run_time=0.3))
-        centered_sum= sum3.deepcopy()
+        axes.x_min = -8
+        axes.x_max = 8
+        def func4(x):
+            value =  0.3*np.cos(2*np.pi*0.25*(x-axes.x_min))
+            value += 0.3*np.cos(2*np.pi*0.5*(x-axes.x_min))
+            value += 0.3*np.cos(2*np.pi*0.75*(x-axes.x_min))
+            value += 0.25*np.cos(2*np.pi*0.1*(x-axes.x_min))
+            return value + self.equilibrium_height
+        ngp = 2*(axes.x_max - axes.x_min)*1 + 1
+        centered_sum = axes.get_graph(func3, num_graph_points = int(ngp))
         centered_sum.shift(2.5*DOWN)
         self.play(Transform(sum3,centered_sum))
 
@@ -897,4 +942,158 @@ class HarmonicSeries(Scene):
         return graph
 
 
-#class Woodwinds(Scene):
+
+class Fourier(GraphScene):
+    CONFIG={
+        "axes_config" : {
+            "x_min": 0,
+            "x_max" : 12,
+            "y_min" : -6,
+            "y_max": 6,
+            "y_axis_config": {
+                "unit_size" : 0.15,
+                "tick_frequency" : 16,
+            },
+        },
+        "frequency_axes_config" : {
+            "x_min":0,
+            "x_max":2,
+            "x_axis_config" : {
+                "unit_size" : 6,
+                "tick_frequency" : 0.25,
+                },
+            "y_min":0,
+            "y_max":1,
+            "y_axis_config" : {
+                "unit_size" : 2, 
+                },
+            "x_labeled_nums" :range(0,2,1),
+        },
+        "equilibrium_height": 1,
+    }
+
+    def break_apart_and_add(self):
+        axes = Axes(**self.axes_config)
+        axes.to_corner(UP+LEFT)
+        func = lambda t : sum([
+            np.cos(TAU*f*t)
+            for f in (0.5, 1, 0.75, 1.5)
+        ])
+        summed_graph = axes.get_graph(func)
+        summed_graph.set_color(RED)
+        sum_label = TextMobject ("f(x) = sin(1x)+sin(1.5x)+sin(2x)+sin(3x)")
+        sum_label.next_to(summed_graph,DOWN)
+        fund = self.get_wave_graph(0.5,axes)
+        fund.to_corner(DOWN,LEFT)
+        fund.shift(UP)
+        first_ot = self.get_wave_graph(0.75,axes)
+        first_ot.next_to(fund,3*UP)
+        second_ot = self.get_wave_graph(1,axes)
+        second_ot.next_to(first_ot,3*UP)
+        third_ot = self.get_wave_graph(1.5,axes)
+        third_ot.next_to(second_ot,3*UP)
+        self.play(FadeIn(axes))
+        self.play(ShowCreation(summed_graph))
+        self.wait(5)
+        self.play(TransformFromCopy(summed_graph, fund))
+        self.play(TransformFromCopy(summed_graph, first_ot))
+        self.play(TransformFromCopy(summed_graph, second_ot))
+        self.play(TransformFromCopy(summed_graph, third_ot))
+        self.wait(5)
+        first_ot_copy = first_ot.copy()
+        first_ot_copy.move_to(fund)
+        self.play(ReplacementTransform(first_ot,first_ot_copy))
+        second_ot_copy = second_ot.copy()
+        second_ot_copy.move_to(fund)
+        self.play(ReplacementTransform(second_ot,second_ot_copy))
+        third_ot_copy = third_ot.copy()
+        third_ot_copy.move_to(fund)
+        self.play(ReplacementTransform(third_ot,third_ot_copy))
+        func_copy = lambda t : sum([
+            2*np.cos(TAU*f*t)
+            for f in (0.5, 1, 0.75, 1.5)
+        ])
+        summed_copy = axes.get_graph(func)
+        summed_copy.move_to(fund)
+        summed_copy.set_color(BLUE)
+        summed_copy_2 = summed_copy.copy()
+        summed_copy_2.to_corner(UP + LEFT)
+        summed_copy_2.shift(3*DOWN)
+        self.play(
+            ShowCreation(summed_copy),
+            FadeOut(fund),
+            FadeOut(first_ot_copy),
+            FadeOut(second_ot_copy),
+            FadeOut(third_ot_copy)
+            )
+        self.play(
+            FadeOut(axes),
+            FadeOut(summed_graph),
+            ReplacementTransform(summed_copy, summed_copy_2)
+            )
+        self.sum = summed_copy_2       
+        self.axes = axes
+        # axes.to_center()
+        # graph_1 = self.get_wave_graph(axes)
+        # self.play(Transform(self.sum, graph1))
+
+
+    def small_changes(self):
+        #summ = self.sum   
+        axes = Axes(**self.axes_config)
+        axes.to_corner(UP + LEFT)
+        axes.shift(3*DOWN)
+        graph_1 = self.get_complex_graph(axes, 3, 1, 3)
+        graph_1.set_color(GREEN)
+        graph_2 = self.get_complex_graph(axes, 5, 1, 1)
+        graph_2.set_color(YELLOW)
+        graph_3 = self.get_complex_graph(axes, 1, 2, 2)
+        graph_3.set_color(RED)
+        graph_4 = self.get_complex_graph(axes, 4, 1.5, 1)
+        graph_4.set_color(BLUE)
+        self.play(ReplacementTransform(self.sum, graph_1, run_time = 1.5))
+        self.play(ReplacementTransform(graph_1, graph_2, run_time = 1.5))
+        self.play(ReplacementTransform(graph_2, graph_3, run_time = 1.5))
+        self.play(ReplacementTransform(graph_3, graph_4, run_time = 1.5))
+
+
+        
+    def get_wave_graph(self, frequency, axes):
+        tail_len = 0.5
+        x_min, x_max = axes.x_min, axes.x_max
+        def func(x):
+            value = 0.5*np.cos(TAU*frequency*x)
+            if x - x_min < tail_len:
+                value *= smooth((x-x_min)/tail_len)
+            if x_max - x < tail_len:
+                value *= smooth((x_max - x )/tail_len)
+            return value + self.equilibrium_height
+        ngp = 2*(x_max - x_min)*frequency + 1
+        graph = axes.get_graph(func, num_graph_points = int(ngp))
+        return graph
+
+    def get_complex_graph(self, axes, tail_len, amp1, amp2):
+        #tail_len = 0.5
+        x_min, x_max = axes.x_min, axes.x_max
+        def func(x):
+            value = np.sin(2*np.pi*0.5*x) + amp1*np.sin(2*np.pi*0.75*x) + amp2*np.sin(2*np.pi*1*x) + np.sin(2*np.pi*1.5*x)
+            if x - x_min < tail_len:
+                value *= smooth((x-x_min)/tail_len)
+            if x_max - x < tail_len:
+                value *= smooth((x_max - x )/tail_len)
+            return value + self.equilibrium_height
+        ngp = 2*(x_max - x_min)*1.5 + 1
+        graph = axes.get_graph(func, num_graph_points = int(ngp))
+        return graph
+        
+
+
+    
+
+
+    def construct(self):
+        self.break_apart_and_add()
+        self.wait(3)
+        self.small_changes()
+        self.wait(5)
+
